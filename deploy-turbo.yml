@@ -1,0 +1,87 @@
+---
+
+- name: Deploy Turbonomic on OpenShift cluster
+  hosts: localhost
+  tasks:
+
+    - name: Create namespace
+      kubernetes.core.k8s:
+        name: turbonomic
+        kind: namespace
+        state: present
+
+    - name: Create scc required in openshift
+      shell: |
+        oc adm policy add-scc-to-group anyuid system:serviceaccounts:turbonomic
+      ignore_errors: yes
+
+    - name: Create CRD
+      kubernetes.core.k8s:
+        src: files/charts_v1alpha1_xl_crd.yaml
+        namespace: turbonomic
+        state: present
+
+    - name: Create service account
+      kubernetes.core.k8s:
+        src: files/service_account.yaml
+        namespace: turbonomic
+        state: present
+
+    - name: Create cluster role
+      kubernetes.core.k8s:
+        src: files/cluster_role.yaml
+        namespace: turbonomic
+        state: present
+
+    - name: Create cluster role binding
+      kubernetes.core.k8s:
+        src: files/cluster_role_binding.yaml
+        namespace: turbonomic
+        state: present
+
+    - name: Create Turbonomic Operator
+      kubernetes.core.k8s:
+        src: files/operator.yaml
+        namespace: turbonomic
+        state: present
+
+    - name: wait for turbo operator to come up
+      shell: oc get po -n turbonomic | grep Running | grep -v "0/1" |grep -c ""
+      register: oc_get_po
+      until: oc_get_po.stdout|int >= 1
+      retries: 50
+      delay: 20
+
+    - name: Create Turbonomic Instance
+      kubernetes.core.k8s:
+        src: files/charts_v1alpha1_xl_cr.yaml
+        namespace: turbonomic
+        state: present
+
+    - name: wait for Turbonomic pods to come up
+      shell: |
+        running_pods=$(oc get po -n turbonomic | grep "Running" | grep -c "")
+        echo $running_pods
+      register: run_pod_count
+      until: run_pod_count.stdout|int > 5
+      retries: 100
+      delay: 20
+
+    - name: wait for ALL Turbonomic pods to come up
+      shell: |
+        ready_pods=$(oc get po -n turbonomic | grep "Running" | grep "0/1" | grep -c "")
+        echo $ready_pods
+      register: ready_pod_count
+      until: ready_pod_count.stdout == ""
+      retries: 100
+      delay: 20
+
+    - name: Capture the Turbonomic console URL
+      shell: |
+        oc get route -n turbonomic nginx -o jsonpath='{.spec.host}'
+      register: turbonomic_console
+
+    - name: Print the Turbonomic console URL
+      debug:
+        msg:
+          - "Turbonomic Console URL : https://{{ turbonomic_console.stdout_lines[0] }}"

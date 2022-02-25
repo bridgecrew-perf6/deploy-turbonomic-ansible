@@ -1,0 +1,54 @@
+---
+
+- name: Deploy Turbonomic on OpenShift cluster
+  hosts: localhost
+  tasks:
+
+    - name: Delete Turbonomic Instance
+      kubernetes.core.k8s:
+        src: files/charts_v1alpha1_xl_cr.yaml
+        namespace: turbonomic
+        state: absent
+
+    - name: wait for only turbo operator to be present
+      shell: oc get po -n turbonomic | grep Running | grep -v "0/1" |grep -c ""
+      register: oc_get_po
+      until: oc_get_po.stdout == "1"
+      retries: 50
+      delay: 20
+
+    - name: Delete Turbonomic Operator
+      kubernetes.core.k8s:
+        src: files/operator.yaml
+        namespace: turbonomic
+        state: absent
+
+    - name: delete cluster role binding
+      kubernetes.core.k8s:
+        src: files/cluster_role_binding.yaml
+        namespace: turbonomic
+        state: absent
+
+    - name: delete cluster role
+      kubernetes.core.k8s:
+        src: files/cluster_role.yaml
+        namespace: turbonomic
+        state: absent
+
+    - name: delete service account
+      kubernetes.core.k8s:
+        src: files/service_account.yaml
+        namespace: turbonomic
+        state: present
+
+    - name: delete CRD
+      kubernetes.core.k8s:
+        src: files/charts_v1alpha1_xl_crd.yaml
+        namespace: turbonomic
+        state: absent
+
+    - name: delete  namespace
+      kubernetes.core.k8s:
+        name: turbonomic
+        kind: namespace
+        state: absent
