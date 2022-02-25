@@ -26,12 +26,12 @@ Please ensure that the following pre-requisites are met before executing the ans
 
 You need to clone the repository on ansible-controller machine. 
 
-Run the following command to run the ansible script, which deploys CP4WAIOps. 
+Run the following command to execute the ansible script, which deploys CP4WAIOps. 
 
 ```
 ansible-playbook deploy-turbo.yml
 ```
-It would take about 30 minutes for the installation to complete. Once the installation is completed, the URL to access the Turbonomic console is presented on the screen. Use them to access the console and checkout the features while going through [Turbonomic Documentation](https://docs.turbonomic.com/). 
+It would take about 30 minutes for the installation to complete. Once the installation is completed, the URL to access the Turbonomic console is presented on the screen. Use that URL to access the Turbonomic console and checkout the features while going through [Turbonomic Documentation](https://docs.turbonomic.com/). 
 
 ### 3. Uninstall Turbonomic ARM
 
